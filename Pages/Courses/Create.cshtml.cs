@@ -1,16 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.Mvc.Rendering;
-using ContosoUniversity.Data;
 using ContosoUniversity.Models;
+using ContosoUniversity.Pages.Courses;
 
 namespace ContosoUniversity
 {
-    public class CreateModel : PageModel
+    public class CreateModel : DepartmentNamePageModel
     {
         private readonly ContosoUniversity.Data.SchoolContext _context;
 
@@ -21,7 +17,7 @@ namespace ContosoUniversity
 
         public IActionResult OnGet()
         {
-        ViewData["DepartmentID"] = new SelectList(_context.Departments, "DepartmentID", "DepartmentID");
+            PopulateDepartmentDropDownList(_context);
             return Page();
         }
 
@@ -32,15 +28,22 @@ namespace ContosoUniversity
         // more details, see https://aka.ms/RazorPagesCRUD.
         public async Task<IActionResult> OnPostAsync()
         {
-            if (!ModelState.IsValid)
+            var emptyCourse = new Course();
+
+            if (await TryUpdateModelAsync<Course>(
+                    emptyCourse,
+                    "Course",
+                    c => c.CourseID, c => c.DepartmentID, c => c.Title, c => c.Credits)
+                )
             {
-                return Page();
+                _context.Courses.Add(emptyCourse);
+                await _context.SaveChangesAsync();
+                return RedirectToPage("./Index");
             }
 
-            _context.Courses.Add(Course);
-            await _context.SaveChangesAsync();
-
-            return RedirectToPage("./Index");
+            // Select DepartmentID if TryUpdateModelAsync fails.
+            PopulateDepartmentDropDownList(_context, emptyCourse.DepartmentID);
+            return Page();
         }
     }
 }
